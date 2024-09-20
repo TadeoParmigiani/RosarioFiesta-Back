@@ -2,10 +2,16 @@
 require_once '../config/db.php'; 
 
 
-$query = "SELECT id_producto, nombre, precio, stock, estado_producto, img, id_categoria, descripcion FROM productos ";
+$id_categoria = isset($_GET['categoria']) ? (int)$_GET['categoria'] : 3;
+
+
+$query = "SELECT nombre, precio, stock, estado_producto, img, id_categoria, descripcion 
+          FROM productos 
+          WHERE estado_producto = 'activo' AND id_categoria = $id_categoria";
+
 $result = $conn->query($query);
 
-
+// Verifico si se obtuvo algún resultado
 if ($result->num_rows > 0) {
     $productos = [];
     while ($row = $result->fetch_assoc()) {

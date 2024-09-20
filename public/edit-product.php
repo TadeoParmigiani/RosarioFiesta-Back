@@ -1,5 +1,5 @@
 <?php
-require_once '../config/db.php'; // Ajusta la ruta según la ubicación de tu archivo de conexión
+require_once '../config/db.php'; 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $idProducto = $_POST['id_producto'];
