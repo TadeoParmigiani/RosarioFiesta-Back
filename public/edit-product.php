@@ -9,11 +9,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $estado = $_POST['estado'];
     $descripcion = $_POST['descripcion'];
     $idCategoria = $_POST['id_categoria'];
+    $img = $_POST['img'];
 
     if ($conn) {
-        $sql = "UPDATE productos SET nombre = ?, precio = ?, stock = ?, estado_producto = ?, descripcion = ?, id_categoria = ? WHERE id_producto = ?";
+        $sql = "UPDATE productos SET nombre = ?, precio = ?, stock = ?, estado_producto = ?, descripcion = ?, id_categoria = ?, img = ? WHERE id_producto = ?";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param('sdissii', $nombre, $precio, $stock, $estado, $descripcion, $idCategoria, $idProducto);
+        $stmt->bind_param('sdissisi', $nombre, $precio, $stock, $estado, $descripcion, $idCategoria,  $img, $idProducto);
 
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'message' => 'Producto actualizado correctamente.']);

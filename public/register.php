@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Compruebor si el email ya existe en la base de datos
+    // Compruebo si el email ya existe en la base de datos
     $checkEmailQuery = $conn->prepare("SELECT * FROM usuario WHERE email = ?");
     $checkEmailQuery->bind_param("s", $email);
     $checkEmailQuery->execute();
@@ -27,10 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Hashear la contraseña
-    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+    $hashedPassword = password_hash($password, algo: PASSWORD_DEFAULT);
 
-    // Insertor el nuevo usuario en la base de datos
-    $query = $conn->prepare("INSERT INTO usuario (nombre, dni, email, contraseña) VALUES (?, ?, ?, ?)");
+    // Inserto el nuevo usuario en la base de datos
+    $query = $conn->prepare("INSERT INTO usuario (nombre, dni, email, contrasena) VALUES (?, ?, ?, ?)");
     $query->bind_param("ssss", $fullName, $dni, $email, $hashedPassword);
 
     if ($query->execute()) {

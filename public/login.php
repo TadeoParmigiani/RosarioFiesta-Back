@@ -18,7 +18,7 @@ if ($result->num_rows > 0) {
     $user = $result->fetch_assoc();
     
     // Verifico la contraseña
-    if (password_verify($password, $user['contraseña'])) {
+    if (password_verify($password, $user['contrasena'])) {
         // Inicio de sesión exitoso
         $response['success'] = true;
        
