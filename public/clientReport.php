@@ -42,7 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pdf->SetFont('Helvetica', '', 12);
 
     foreach ($clientes as $cliente_id) {
-        // Consulta para obtener datos del cliente filtrando por el ID
         $query = "
             SELECT c.nombre AS nombre_cliente,
                    p.nombre AS nombre_producto,
@@ -98,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdf->Ln(10);
             continue;
         }
-
+      
         // Detalles del cliente en el PDF
         $pdf->Cell(0, 10, 'Cliente: ' . $nombre_cliente, 0, 1);
         

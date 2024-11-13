@@ -1,7 +1,7 @@
 <?php
 // Conexión a la base de datos
 require_once '../config/db.php'; 
-session_start(); // Asegúrate de que la sesión esté iniciada
+session_start(); 
 
 // Validar que el request sea POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-// Obtener el cuerpo del request en formato JSON
+// Obtengo el cuerpo del request en formato JSON
 $data = json_decode(file_get_contents('php://input'), true);
 
 // Obtener los datos enviados
@@ -20,7 +20,7 @@ $email = $data['cliente']['email'] ?? null;
 $dni = $data['cliente']['dni'] ?? null;
 $telefono = $data['cliente']['telefono'] ?? null;
 $metodo_pago = $data['metodo_pago'] ?? null;
-$productos = $data['productos'] ?? null;  // Los productos deben llegar como un array
+$productos = $data['productos'] ?? null; 
 
 // Validar que todos los campos obligatorios estén presentes
 if (!$nombre || !$apellido || !$email || !$dni || !$telefono || !$metodo_pago || !$productos) {
@@ -89,8 +89,6 @@ try {
     $stmt_venta->close();
 
     
-
-    // Insertar los productos de la venta en la tabla 'ventas_productos'
     foreach ($productos as $producto) {
         $query_producto = "INSERT INTO ventas_productos (id_venta, id_producto, cantidad, precio_unitario) VALUES (?, ?, ?, ?)";
         $stmt_producto = $conn->prepare($query_producto);
@@ -100,13 +98,22 @@ try {
             throw new Exception('Error al insertar el producto en la venta');
         }
 
+        
+        $query_actualizar_stock = "UPDATE productos SET stock = stock - ? WHERE id_producto = ?";
+        $stmt_actualizar_stock = $conn->prepare($query_actualizar_stock);
+        $stmt_actualizar_stock->bind_param("ii", $producto['quantity'], $producto['id']);
+
+        if (!$stmt_actualizar_stock->execute()) {
+            throw new Exception('Error al actualizar el stock del producto');
+        }
+
         $stmt_producto->close();
+        $stmt_actualizar_stock->close();
     }
 
-    // Si todo va bien, confirmar la transacción
+    // confirmar la transacción
     $conn->commit();
 
-    // Responder con éxito
     header('Content-Type: application/json');
     echo json_encode(['success' => true, 'message' => 'Venta realizada con éxito']);
     
