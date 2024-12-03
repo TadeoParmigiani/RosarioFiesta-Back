@@ -2,7 +2,7 @@
 require_once '../config/db.php'; 
 
 
-$query = "SELECT id_producto, nombre, precio, stock, estado_producto, img, id_categoria, descripcion FROM productos WHERE id_categoria != 1 ";
+$query = "SELECT id_producto, nombre, precio, stock, estado_producto, img, id_categoria, descripcion FROM productos";
 $result = $conn->query($query);
 
 

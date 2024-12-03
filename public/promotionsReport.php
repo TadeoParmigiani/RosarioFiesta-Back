@@ -50,30 +50,70 @@ foreach ($data as $producto => $ventas_por_mes) {
     $temporadas[$producto]['menor_demanda'] = array_intersect($temporadas[$producto]['menor_demanda'], $meses_rango);
 }
 
-// Generar el PDF
+// Crear el PDF
 $pdf = new TCPDF();
 $pdf->SetCreator(PDF_CREATOR);
-$pdf->SetAuthor('Tu Nombre');
+$pdf->SetAuthor('Administrador');
 $pdf->SetTitle('Informe de Análisis de Promociones');
-$pdf->SetHeaderData('', 0, 'Informe de Análisis de Promociones', "Fecha del Informe: " . date('Y-m-d'));
-$pdf->setPrintHeader(true);
+
+// Desactivar el pie de página y encabezado predeterminados
+$pdf->setPrintHeader(false); 
 $pdf->setPrintFooter(false);
+
+// Agregar una nueva página
 $pdf->AddPage();
-$pdf->Ln(10);
 
-$pdf->SetFont('helvetica', '', 12);
-$pdf->Cell(0, 10, 'Informe de Análisis de las Promociones', 0, 1);
-$pdf->Cell(0, 10, "Periodo de fecha: $fecha_inicio a $fecha_fin", 0, 1);
-$pdf->Ln(10);
+// Ruta del logo
+$logo = '../../RosarioFiesta-Front-master/static/img/logo rosario fiesta (1).png'; // Asegúrate de que la ruta es correcta
 
+// Colocar el logo en la parte superior izquierda, sin deformarlo (ajustamos solo la posición)
+$pdf->Image($logo, 10, 5, 30, 30);
+
+// Ajustar el margen superior después de agregar el logo
+$pdf->SetY(10);
+
+// Fuente general para el informe
+$pdf->SetFont('helvetica', '', 14);
+
+// Título principal del informe en color negro
+$pdf->SetFont('helvetica', 'B', 20);
+$pdf->SetTextColor(0, 0, 0,); // Negro
+$pdf->Cell(0, 10, 'Informe de Análisis de Promociones', 0, 1, 'C');
+$pdf->Ln(5); // Espacio después del título
+
+// Subtítulo con la fecha en negro
+$pdf->SetFont('helvetica', 'I', 14); // Fuente itálica para el subtítulo
+$pdf->Cell(0, 10, "Fecha del Informe: " . date('Y-m-d'), 0, 1, 'R');
+$pdf->Ln(10); // Espacio después del subtítulo
+
+// Título de la sección en negrita, color negro
+$pdf->SetFont('helvetica', 'B', 14);  // Negrita para el título de la sección
+$pdf->Cell(0, 10, 'Detalles del Informe', 0, 1, 'L');
+$pdf->Ln(5); // Espacio antes de comenzar con los detalles de las promociones
+
+// Información general del periodo
+$pdf->SetFont('helvetica', '', 12);  // Fuente normal para la descripción
+$pdf->Cell(0, 10, "Periodo de fecha: $fecha_inicio a $fecha_fin", 0, 1, 'L');
+$pdf->Ln(10); // Espacio antes de la tabla
+
+// Crear tabla para los detalles de las promociones
+$pdf->SetFont('helvetica', 'B', 10);
+$pdf->Cell(60, 10, 'Producto', 1, 0, 'C', 0, '', 1); // Columna Producto
+$pdf->Cell(60, 10, 'Temporada de Mayor Demanda', 1, 0, 'C', 0, '', 1); // Temporada de mayor demanda
+$pdf->Cell(60, 10, 'Temporada de Menor Demanda', 1, 1, 'C', 0, '', 1); // Temporada de menor demanda
 $pdf->SetFont('helvetica', '', 10);
+
+// Iterar sobre las temporadas y mostrar los detalles en la tabla
 foreach ($temporadas as $producto => $temporada) {
-    $pdf->Cell(0, 10, "Producto: $producto", 0, 1);
-    $pdf->Cell(0, 10, "Temporada de Mayor Demanda: " . mesEspañol($temporada['mayor_demanda']), 0, 1);
-    $pdf->Cell(0, 10, "Temporada de Menor Demanda: " . mesEspañol($temporada['menor_demanda']), 0, 1);
-    $pdf->Ln(5);
+    $pdf->Cell(60, 10, $producto, 1, 0, 'C');
+    $pdf->Cell(60, 10, mesEspañol($temporada['mayor_demanda']), 1, 0, 'C');
+    $pdf->Cell(60, 10, mesEspañol($temporada['menor_demanda']), 1, 1, 'C');
 }
 
+// Finalizar la tabla y agregar un espacio después
+$pdf->Ln(10);
+
+// Finalizar el PDF y enviarlo al navegador
 $pdf->Output('informe_promociones.pdf', 'I');
 $conn->close();
 
