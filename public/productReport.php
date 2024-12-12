@@ -25,7 +25,7 @@ $pdf->SetCreator(PDF_CREATOR);
 $pdf->SetAuthor('Administrador');
 $pdf->SetTitle('Informe de Análisis de Productos');
 $pdf->setPrintHeader(false); // Desactiva la cabecera
-$pdf->setPrintFooter(false); // Desactiva el pie de página (si no lo deseas)
+$pdf->setPrintFooter(false); // Desactiva el pie de página 
 
 $pdf->AddPage();
 

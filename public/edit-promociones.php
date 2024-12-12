@@ -1,22 +1,24 @@
 <?php
 require_once '../config/db.php';
 
-// Obtener los datos enviados mediante POST
-$data = json_decode(file_get_contents("php://input"));
-
 // Verificar si los datos necesarios están presentes
-if (!isset($data->id_producto) || !isset($data->nombre) || !isset($data->precio) || !isset($data->descripcion) || !isset($data->estado_producto) || !isset($data->productosBase) || !isset($data->cantidad)) {
+if (!isset($_POST['editImg']) || !isset($_POST['id_producto']) || !isset($_POST['editNombre']) || !isset($_POST['editPrecio']) || !isset($_POST['editDescripcion']) || !isset($_POST['editEstado']) || !isset($_POST['productosBase']) || !isset($_POST['cantidad'])) {
     echo json_encode(['success' => false, 'message' => 'Faltan datos para la edición']);
     exit();
 }
 
-$id_producto = $data->id_producto;
-$nombre = $data->nombre;
-$precio = $data->precio;
-$descripcion = $data->descripcion;
-$estado_producto = $data->estado_producto;
-$productosBase = $data->productosBase;
-$cantidades = $data->cantidad;
+// Asignar variables desde los datos enviados (POST)
+$id_producto = $_POST['id_producto'];
+$nombre = $_POST['editNombre'];
+$precio = $_POST['editPrecio'];
+$descripcion = $_POST['editDescripcion'];
+$estado_producto = $_POST['editEstado'];
+$productosBase = $_POST['productosBase']; // No usamos json_decode(), ya que es un arreglo directamente
+$cantidades = $_POST['cantidad']; // Igual para las cantidades
+$img = $_POST['editImg'];
+
+// Eliminar duplicados en productosBase
+$productosBase = array_unique($productosBase);
 
 // Calcular el stock de la promoción
 $stock_promocion = PHP_INT_MAX; // Inicializar con el valor máximo posible
@@ -48,12 +50,8 @@ $conn->begin_transaction();
 
 try {
     // Actualizar la información básica de la promoción
-    $stmt = $conn->prepare("
-        UPDATE productos 
-        SET nombre = ?, precio = ?, descripcion = ?, estado_producto = ?, stock = ? 
-        WHERE id_producto = ?
-    ");
-    $stmt->bind_param("sdssii", $nombre, $precio, $descripcion, $estado_producto, $stock_promocion, $id_producto);
+    $stmt = $conn->prepare("UPDATE productos SET nombre = ?, precio = ?, descripcion = ?, estado_producto = ?, stock = ?, img = ? WHERE id_producto = ?");
+    $stmt->bind_param("sdssisi", $nombre, $precio, $descripcion, $estado_producto, $stock_promocion, $img, $id_producto);
     $stmt->execute();
     $stmt->close();
 
@@ -67,6 +65,7 @@ try {
     foreach ($productosBase as $index => $productoId) {
         $cantidad = $cantidades[$index];
 
+        // Insertar los productos base de la promoción
         $stmt = $conn->prepare("INSERT INTO promociones_productos (id_promocion, id_producto, cantidad) VALUES (?, ?, ?)");
         $stmt->bind_param("iii", $id_producto, $productoId, $cantidad);
         $stmt->execute();

@@ -1,7 +1,7 @@
 <?php
 require_once '../config/db.php';
 
-$sql = "SELECT CONCAT(nombre, ' ', apellido) AS nombre, email, telefono, fecha_nacimiento, mensaje FROM mensajes";
+$sql = "SELECT CONCAT(nombre, ' ', apellido) AS nombre, email, telefono, fecha_nacimiento, mensaje FROM mensajes ORDER BY id DESC";
 $result = $conn->query($sql);
 
 $mensaje = array();

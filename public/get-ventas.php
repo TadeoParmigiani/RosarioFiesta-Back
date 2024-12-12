@@ -4,7 +4,7 @@ require_once '../config/db.php'; // Incluye el archivo de conexión
 
 $query = "SELECT ventas.id_venta, ventas.fecha,  clientes.id_cliente, CONCAT (clientes.nombre, ' ', clientes.apellido) AS cliente, ventas.metodo_pago, ventas.total, ventas.estado
           FROM ventas
-          JOIN clientes ON ventas.id_cliente = clientes.id_cliente";
+          JOIN clientes ON ventas.id_cliente = clientes.id_cliente ORDER BY ventas.fecha DESC";
 $result = $conn->query($query);
 
 $ventas = [];

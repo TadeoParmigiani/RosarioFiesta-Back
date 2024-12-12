@@ -23,7 +23,11 @@ while ($row = $result->fetch_assoc()) {
     $productosBase = [];
     $cantidades = [];
     while ($productoBaseRow = $productosBaseResult->fetch_assoc()) {
-        $productosBase[] = $productoBaseRow['nombre'];  // Obtenemos el nombre del producto
+        
+        $productosBase[] = [
+            'id_producto' => $productoBaseRow['id_producto'],  // Obtenemos el ID del producto
+            'nombre' => $productoBaseRow['nombre']  // Obtenemos el nombre del producto
+        ];
         $cantidades[] = $productoBaseRow['cantidad'];   // Obtenemos la cantidad
     }
 

@@ -104,6 +104,7 @@ try {
             $id_producto_base = $promocion['id_producto'];
             $cantidad_base = $promocion['cantidad'] * $producto['quantity'];
 
+            // Actualizar el stock del producto base
             $query_actualizar_base = "UPDATE productos SET stock = stock - ? WHERE id_producto = ?";
             $stmt_actualizar_base = $conn->prepare($query_actualizar_base);
             $stmt_actualizar_base->bind_param("ii", $cantidad_base, $id_producto_base);
@@ -111,10 +112,50 @@ try {
             if (!$stmt_actualizar_base->execute()) {
                 throw new Exception('Error al actualizar el stock del producto base');
             }
-
             $stmt_actualizar_base->close();
-        }
 
+            // Obtener las promociones que contienen este producto base
+            $query_promociones_impactadas = "SELECT id_promocion FROM promociones_productos WHERE id_producto = ?";
+            $stmt_promociones_impactadas = $conn->prepare($query_promociones_impactadas);
+            $stmt_promociones_impactadas->bind_param("i", $id_producto_base);
+            $stmt_promociones_impactadas->execute();
+            $result_promociones_impactadas = $stmt_promociones_impactadas->get_result();
+
+            while ($promocion_impactada = $result_promociones_impactadas->fetch_assoc()) {
+                $id_promocion_impactada = $promocion_impactada['id_promocion'];
+
+                // Calcular el nuevo stock mínimo para la promoción
+                $query_stock_promocion = "
+                    SELECT MIN(p.stock / pp.cantidad) AS stock_minimo
+                    FROM productos p
+                    INNER JOIN promociones_productos pp ON p.id_producto = pp.id_producto
+                    WHERE pp.id_promocion = ?
+                ";
+                $stmt_stock_promocion = $conn->prepare($query_stock_promocion);
+                $stmt_stock_promocion->bind_param("i", $id_promocion_impactada);
+                $stmt_stock_promocion->execute();
+                $result_stock_promocion = $stmt_stock_promocion->get_result();
+
+                if ($row = $result_stock_promocion->fetch_assoc()) {
+                    $nuevo_stock_promocion = intval($row['stock_minimo']);
+
+                    // Actualizar el stock de la promoción impactada
+                    $query_actualizar_promocion = "UPDATE productos SET stock = ? WHERE id_producto = ?";
+                    $stmt_actualizar_promocion = $conn->prepare($query_actualizar_promocion);
+                    $stmt_actualizar_promocion->bind_param("ii", $nuevo_stock_promocion, $id_promocion_impactada);
+
+                    if (!$stmt_actualizar_promocion->execute()) {
+                        throw new Exception('Error al actualizar el stock de la promoción impactada');
+                    }
+
+                    $stmt_actualizar_promocion->close();
+                }
+
+                $stmt_stock_promocion->close();
+            }
+
+            $stmt_promociones_impactadas->close();
+        }
         $stmt_promocion->close();
         $stmt_producto->close();
     }

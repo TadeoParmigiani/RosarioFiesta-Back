@@ -2,6 +2,10 @@
 
 require_once '../config/db.php';
 
+header('Content-Type: application/json');
+
+$response = ['success' => false, 'message' => ''];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Obtener datos del formulario
     $nombre = $_POST['nombre'];
@@ -15,16 +19,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Validar entradas
     if (empty($productos_base) || count($productos_base) !== count($cantidades)) {
-        echo "Debe proporcionar productos base y cantidades válidos.";
+        $response['message'] = "Debe proporcionar productos base y cantidades válidos.";
+        echo json_encode($response);
         exit;
+    }
+
+    // Eliminar productos duplicados (sin sumar las cantidades)
+    $productos_base_unicos = array_unique($productos_base);
+    
+    // Filtramos las cantidades para mantener solo las correspondientes a los productos base únicos
+    $cantidades_unicas = [];
+    foreach ($productos_base_unicos as $producto) {
+        $indice = array_search($producto, $productos_base);
+        $cantidades_unicas[] = $cantidades[$indice];
     }
 
     // Calcular el stock de la promoción
     $stock_promocion = PHP_INT_MAX;
 
-    foreach ($productos_base as $index => $id_producto_base) {
-        $cantidad = $cantidades[$index];
-
+    foreach ($productos_base_unicos as $id_producto_base) {
         // Consultar el stock del producto base
         $stmt = $conn->prepare("SELECT stock FROM productos WHERE id_producto = ?");
         $stmt->bind_param("i", $id_producto_base);
@@ -37,9 +50,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stock_base = $producto['stock'];
 
             // Calcular cuántas promociones se pueden hacer con este producto
-            $stock_promocion = min($stock_promocion, floor($stock_base / $cantidad));
+            $stock_promocion = min($stock_promocion, floor($stock_base / $cantidades_unicas[array_search($id_producto_base, $productos_base_unicos)]));
         } else {
-            echo "Producto base con ID $id_producto_base no encontrado.";
+            $response['message'] = "Producto base con ID $id_producto_base no encontrado.";
+            echo json_encode($response);
             exit;
         }
     }
@@ -58,24 +72,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id_promocion = $stmt->insert_id;
         $stmt->close();
 
-        // 2. Relacionar la promoción con los productos base en `promocion_productos`
-        foreach ($productos_base as $index => $id_producto_base) {
-            $cantidad = $cantidades[$index];
+        // 2. Relacionar la promoción con los productos base en `promociones_productos`
+        foreach ($productos_base_unicos as $index => $id_producto_base) {
+            // Insertamos la relación entre la promoción y el producto base
             $stmt = $conn->prepare("INSERT INTO promociones_productos (id_promocion, id_producto, cantidad) VALUES (?, ?, ?)");
-            $stmt->bind_param("iii", $id_promocion, $id_producto_base, $cantidad);
+            $stmt->bind_param("iii", $id_promocion, $id_producto_base, $cantidades_unicas[$index]);
             $stmt->execute();
             $stmt->close();
         }
 
         // Confirmar transacción
         $conn->commit();
-        echo "Promoción y productos base guardados exitosamente.";
+        $response['success'] = true;
+        $response['message'] = "Promoción y productos base guardados exitosamente.";
     } catch (Exception $e) {
         // Revertir transacción si algo falla
         $conn->rollback();
-        echo "Error al guardar los datos: " . $e->getMessage();
+        $response['message'] = "Error al guardar los datos: " . $e->getMessage();
     }
 
     $conn->close();
+} else {
+    $response['message'] = "Método de solicitud no válido.";
 }
-?>
+
+echo json_encode($response);

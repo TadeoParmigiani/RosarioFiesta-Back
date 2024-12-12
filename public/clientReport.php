@@ -2,8 +2,7 @@
 require_once '../config/tcpdf-main/tcpdf.php';
 require_once "../config/db.php";
 
-// Obtener lista de clientes para el select
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $query = "SELECT id_cliente, CONCAT(nombre, ' ', apellido) AS nombre FROM clientes";
     $result = $conn->query($query);
 
@@ -11,42 +10,42 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     while ($row = $result->fetch_assoc()) {
         $clientes[] = $row;
     }
+
+    header('Content-Type: application/json');
     echo json_encode($clientes);
     exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Obtener los IDs de clientes seleccionados
     $clientes = $_POST['clientes'];
 
-    // Crear un nuevo PDF
     $pdf = new TCPDF();
     $pdf->SetCreator(PDF_CREATOR);
     $pdf->SetAuthor('Rosario Fiesta');
+    $pdf->SetTitle('Informe de Análisis de Clientes');
+    $pdf->setPrintHeader(false);
+    $pdf->setPrintFooter(false);
     $pdf->AddPage();
 
-    // Encabezado del informe
+    $logo = '../../RosarioFiesta-Front-master/static/img/logo rosario fiesta (1).png';
+    $pdf->Image($logo, 10, 10, 30, 30);
+
     $pdf->SetFont('Helvetica', 'B', 16);
-    $pdf->SetTitle('Informe de Análisis de Clientes');
+    $pdf->SetY(15);
     $pdf->Cell(0, 10, 'Informe de Análisis de Clientes', 0, 1, 'C');
-    $pdf->Ln(10);
+    $pdf->Ln(15);
 
-    // Fecha del informe
     $pdf->SetFont('Helvetica', '', 12);
-    $pdf->Cell(0, 10, 'Fecha del Informe: ' . date('Y-m-d'), 0, 1);
+    $pdf->Cell(0, 10, 'Fecha del Informe: ' . date('Y-m-d'), 0, 1, 'R');
     $pdf->Ln(10);
-
-    // Análisis de Clientes
-    $pdf->SetFont('Helvetica', 'B', 14);
-    $pdf->Cell(0, 10, 'Análisis de Clientes:', 0, 1);
-    $pdf->SetFont('Helvetica', '', 12);
 
     foreach ($clientes as $cliente_id) {
         $query = "
-            SELECT c.nombre AS nombre_cliente,
-                   p.nombre AS nombre_producto,
-                   SUM(vp.cantidad) AS cantidad,
-                   SUM(vp.cantidad * vp.precio_unitario) AS total_producto
+            SELECT 
+                c.nombre AS nombre_cliente,
+                p.nombre AS nombre_producto,
+                SUM(vp.cantidad) AS cantidad,
+                SUM(vp.cantidad * vp.precio_unitario) AS total_producto
             FROM clientes c
             JOIN ventas v ON c.id_cliente = v.id_cliente
             JOIN ventas_productos vp ON v.id_venta = vp.id_venta
@@ -54,65 +53,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             WHERE c.id_cliente = ?
             GROUP BY c.nombre, p.nombre
         ";
-
         $stmt = $conn->prepare($query);
         $stmt->bind_param("i", $cliente_id);
         $stmt->execute();
         $result = $stmt->get_result();
 
-        // Detalles del cliente
-        $total_invertido = 0;
-        $productos_comprados = [];
-        $cantidad_por_producto = [];
-        $preferencia = '';
-
-        if ($result->num_rows > 0) {
-            while ($cliente_data = $result->fetch_assoc()) {
-                $nombre_cliente = $cliente_data['nombre_cliente'];
-                $producto = $cliente_data['nombre_producto'];
-                $cantidad = $cliente_data['cantidad'];
-                $total_producto = $cliente_data['total_producto'];
-
-                // Acumular datos
-                $productos_comprados[] = $producto . ' (' . $cantidad . ' unidades)';
-                $total_invertido += $total_producto;
-
-                // Contar cantidad por producto
-                if (!isset($cantidad_por_producto[$producto])) {
-                    $cantidad_por_producto[$producto] = 0;
-                }
-                $cantidad_por_producto[$producto] += $cantidad;
-            }
-
-            // Determinar la preferencia (mayor cantidad comprada)
-            $max_cantidad = 0;
-            foreach ($cantidad_por_producto as $producto => $cantidad) {
-                if ($cantidad > $max_cantidad) {
-                    $max_cantidad = $cantidad;
-                    $preferencia = $producto;
-                }
-            }
-        } else {
-            $pdf->Cell(0, 10, 'No hay datos para el cliente con ID: ' . $cliente_id, 0, 1);
+        if ($result->num_rows === 0) {
+            $pdf->SetFont('Helvetica', '', 12);
+            $pdf->SetFillColor(255, 220, 220);
+            $pdf->MultiCell(0, 10, 'No hay datos para el cliente con ID: ' . $cliente_id, 0, 'L', 1);
             $pdf->Ln(10);
             continue;
         }
-      
-        // Detalles del cliente en el PDF
-        $pdf->Cell(0, 10, 'Cliente: ' . $nombre_cliente, 0, 1);
-        
-        // Imprimir cada producto en una nueva línea
-        $pdf->Cell(0, 10, 'Productos comprados:', 0, 1);
-        foreach ($productos_comprados as $producto) {
-            $pdf->Cell(0, 10, '- ' . $producto, 0, 1);
+
+        $nombre_cliente = '';
+        $productos_comprados = [];
+        $cantidad_por_producto = [];
+        $total_invertido = 0;
+
+        while ($row = $result->fetch_assoc()) {
+            $nombre_cliente = $row['nombre_cliente'];
+            $producto = $row['nombre_producto'];
+            $cantidad = $row['cantidad'];
+            $total_producto = $row['total_producto'];
+
+            $productos_comprados[] = "$producto ($cantidad unidades)";
+            $cantidad_por_producto[$producto] = $cantidad;
+            $total_invertido += $total_producto;
         }
 
-        $pdf->Cell(0, 10, 'Preferencias: Mayor interés en ' . $preferencia, 0, 1);
-        $pdf->Cell(0, 10, 'Total invertido: $' . number_format($total_invertido, 2), 0, 1);
+        arsort($cantidad_por_producto);
+        $preferencia = array_key_first($cantidad_por_producto);
+
+        // Marco para el cliente
+        $pdf->SetFont('Helvetica', 'B', 14);
+        $pdf->SetFillColor(230, 230, 250);
+        $pdf->SetDrawColor(150, 150, 150);
+        $pdf->SetLineWidth(0.5);
+        $pdf->MultiCell(0, 10, "Cliente: $nombre_cliente", 1, 'C', 1);
+        $pdf->Ln(5);
+
+        $pdf->SetFont('Helvetica', 'B', 12);
+        $pdf->Cell(0, 10, 'Productos comprados:', 0, 1, 'L');
+        $pdf->SetFont('Helvetica', '', 12);
+        foreach ($productos_comprados as $producto) {
+            $pdf->Cell(10); // Sangría
+            $pdf->Cell(0, 8, '- ' . $producto, 0, 1, 'L');
+        }
+
+        $pdf->Ln(5);
+        $pdf->SetFont('Helvetica', 'B', 12);
+        $pdf->Cell(0, 10, 'Preferencia:', 0, 1, 'L');
+        $pdf->SetFont('Helvetica', '', 12);
+        $pdf->Cell(0, 8, $preferencia, 0, 1, 'L');
+
+        $pdf->Ln(5);
+        $pdf->SetFont('Helvetica', 'B', 12);
+        $pdf->Cell(0, 10, 'Total invertido:', 0, 1, 'L');
+        $pdf->SetFont('Helvetica', '', 12);
+        $pdf->Cell(0, 8, '$' . number_format($total_invertido, 2), 0, 1, 'L');
+
         $pdf->Ln(10);
     }
 
-    // Cerrar y mostrar el PDF
     $pdf->Output('informe_analisis_clientes.pdf', 'I');
     $conn->close();
 }
